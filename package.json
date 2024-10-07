@@ -1,0 +1,22 @@
+{
+  "name": "tempeh-cli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@effect/cli": "^0.46.0",
+    "@effect/platform": "^0.67.0",
+    "@effect/platform-node": "^0.62.0",
+    "effect": "^3.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "tsup": "^8.3.0"
+  }
+}
