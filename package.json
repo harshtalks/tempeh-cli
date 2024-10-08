@@ -16,8 +16,10 @@
     "@effect/platform-node": "^0.62.0",
     "@effect/printer-ansi": "^0.37.1",
     "effect": "^3.9.0",
-    "execa": "^9.4.0",
-    "type-fest": "^4.26.1"
+    "ora": "^8.1.0",
+    "tempeh": "^4.3.0",
+    "type-fest": "^4.26.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22.7.4",

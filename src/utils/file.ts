@@ -17,8 +17,8 @@ import {
 import { FileSystem, Path } from "@effect/platform";
 import { TempehConfig } from "../deps/config";
 import { PackageJson } from "type-fest";
-import * as Ansi from "@effect/printer-ansi/Ansi";
-import * as AnsiDoc from "@effect/printer-ansi/AnsiDoc";
+import ora from "ora";
+import { installMissingDependency } from "./packages";
 
 // check if the tempeh and zod is installed
 export const checkDependencies = injectDependencies.pipe(
@@ -27,29 +27,16 @@ export const checkDependencies = injectDependencies.pipe(
     return fs.readFileString(packageJsonPath).pipe(
       Effect.andThen((v) => JSON.parse(v) as unknown as PackageJson),
       Effect.andThen((packageJson) => {
-        if ("dependency" in packageJson) {
-          const deps = packageJson["dependencies"];
-          if (deps && "tempeh" in deps && "zod" in deps) {
-            return Effect.succeed(true);
-          } else {
-            return Effect.fail(
-              new MissingDependencies(
-                "Tempeh and Zod not installed. Please install them before running this command.",
-              ),
-            );
-          }
+        const deps = packageJson.dependencies || {};
+        const missingDeps = ["tempeh", "zod"].filter((dep) => !(dep in deps));
+
+        if (missingDeps.length === 0) {
+          return Effect.succeed(true);
         } else {
-          return Effect.fail(
-            new MissingDependencies(
-              "Tempeh and Zod not installed. Please install them before running this command.",
-            ),
+          return installMissingDependency(
+            ...missingDeps.map((el) => `${el}@latest`),
           );
         }
-      }),
-      Effect.catchTag("MissingDependencies", (err) => {
-        return Effect.logError(
-          "missing dependencies in the project. we need tempeh and shii",
-        );
       }),
     );
   }),
