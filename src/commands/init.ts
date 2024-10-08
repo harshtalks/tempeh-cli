@@ -16,6 +16,7 @@ import { Console, Effect } from "effect";
 import { TS_CONFIG } from "../utils/constants";
 import {
   addRoutes,
+  checkDependencies,
   createRouteConfig,
   createTempehConfig,
   isValidNextProject,
@@ -29,7 +30,6 @@ class TSConfgNotFoundError extends Error {
 export const checkNextJsProject = Effect.all([FileSystem.FileSystem, Path.Path])
   .pipe(
     Effect.andThen(([fs, path]) => {
-      console.log(path.join(process.cwd(), TS_CONFIG));
       const isTsProject = fs.exists(path.join(process.cwd(), TS_CONFIG));
       return isTsProject
         ? Effect.succeed(true)
@@ -71,7 +71,15 @@ const routesLocatioon = Prompt.select({
   ],
 });
 
+const hasTypescript = Prompt.toggle({
+  message: "Is the project using typescript?",
+  initial: true,
+  active: "Yes",
+  inactive: "No",
+});
+
 const initCmdPrompts = Prompt.all({
+  hasTypescript,
   routeConfigFileLocation,
   routesLocatioon,
 });
@@ -79,12 +87,13 @@ const initCmdPrompts = Prompt.all({
 const initCmd = Command.prompt("init", initCmdPrompts, (prompts) => {
   return isValidNextProject.pipe(
     Effect.andThen((config) => {
+      config.isTs = prompts.hasTypescript;
       config.routeConfigFileLocation = prompts.routeConfigFileLocation;
       config.routesDir = prompts.routesLocatioon as "./app" | "./src/app";
 
       return config;
     }),
-    // Effect.andThen(checkDependencies),
+    Effect.andThen(checkDependencies),
     Effect.andThen(createTempehConfig),
     Effect.andThen(createRouteConfig),
     Effect.andThen(addRoutes),

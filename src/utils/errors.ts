@@ -1,11 +1,11 @@
 export class TSConfgNotFoundError extends Error {
-  _tag = "TSConfgNotFoundError";
+  readonly _tag = "TSConfgNotFoundError";
 }
 
 export class NextError extends Error {
-  _tag = "NextError";
+  readonly _tag = "NextError";
 }
 
-export class MissingDeoendencies extends Error {
-  _tag = "MissingDeoendencies";
+export class MissingDependencies extends Error {
+  readonly _tag = "MissingDependencies";
 }

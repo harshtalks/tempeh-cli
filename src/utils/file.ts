@@ -1,9 +1,8 @@
-import { Effect, Either } from "effect";
+import { Console, Effect, Either } from "effect";
 import injectDependencies from "../deps";
-import { MissingDeoendencies, NextError } from "./errors";
+import { MissingDependencies, NextError } from "./errors";
 import {
-  NEXT_CONFIG,
-  NEXT_CONFIG_JS,
+  NEXT_CONFIG_FILES,
   ROUTE_CONFIG,
   ROUTE_INFO,
   ROUTE_INFO_JS,
@@ -17,52 +16,61 @@ import {
 } from "./content";
 import { FileSystem, Path } from "@effect/platform";
 import { TempehConfig } from "../deps/config";
+import { PackageJson } from "type-fest";
+import * as Ansi from "@effect/printer-ansi/Ansi";
+import * as AnsiDoc from "@effect/printer-ansi/AnsiDoc";
 
 // check if the tempeh and zod is installed
-export const checkDependencies = injectDependencies
-  .pipe(
-    Effect.andThen(({ fs, path }) => {
-      // read package.json
-      const packageJsonPath = path.join(process.cwd(), "package.json");
-      const packageJson = fs.readFileString(packageJsonPath);
-      return packageJson;
-    }),
-  )
-  .pipe(
-    Effect.andThen(JSON.parse),
-    Effect.andThen((packageJsonJSON) => {
-      // @ts-ignore
-      const deps = packageJsonJSON["dependencies"];
-      if ("tempeh" in deps && "zod" in deps) {
-        return Effect.succeed(true);
-      } else {
-        return Effect.fail(
-          new MissingDeoendencies(
-            "Tempeh and Zod not installed. Please install them before running this command.",
-          ),
+export const checkDependencies = injectDependencies.pipe(
+  Effect.andThen(({ fs, path }) => {
+    const packageJsonPath = path.join(process.cwd(), "package.json");
+    return fs.readFileString(packageJsonPath).pipe(
+      Effect.andThen((v) => JSON.parse(v) as unknown as PackageJson),
+      Effect.andThen((packageJson) => {
+        if ("dependency" in packageJson) {
+          const deps = packageJson["dependencies"];
+          if (deps && "tempeh" in deps && "zod" in deps) {
+            return Effect.succeed(true);
+          } else {
+            return Effect.fail(
+              new MissingDependencies(
+                "Tempeh and Zod not installed. Please install them before running this command.",
+              ),
+            );
+          }
+        } else {
+          return Effect.fail(
+            new MissingDependencies(
+              "Tempeh and Zod not installed. Please install them before running this command.",
+            ),
+          );
+        }
+      }),
+      Effect.catchTag("MissingDependencies", (err) => {
+        return Effect.logError(
+          "missing dependencies in the project. we need tempeh and shii",
         );
-      }
-    }),
-  );
+      }),
+    );
+  }),
+);
 
 // check if the project is a next.js project
 export const isValidNextProject = injectDependencies.pipe(
   Effect.andThen(({ fs, path, config }) => {
-    return fs.exists(path.join(process.cwd(), TS_CONFIG)).pipe(
-      Effect.andThen((isTs) => {
-        config.isTs = isTs;
-
-        const pathToNextConfig = config.isTs ? NEXT_CONFIG : NEXT_CONFIG_JS;
-
-        return fs.exists(path.join(process.cwd(), pathToNextConfig)).pipe(
-          Effect.andThen((hasNextConfig) => {
-            if (!hasNextConfig) {
-              return Effect.fail(new NextError("Next config not found"));
-            }
-            return Effect.succeed(config);
-          }),
-        );
-      }),
+    return fs.readDirectory(process.cwd()).pipe(
+      Effect.map((files) =>
+        files.some((file) => NEXT_CONFIG_FILES.includes(file)),
+      ),
+      Effect.andThen((isNextProject) =>
+        isNextProject
+          ? Effect.succeed(config)
+          : Effect.fail(
+              new NextError(
+                "This is not a Next.js project. Please run this command in a Next.js project.",
+              ),
+            ),
+      ),
     );
   }),
 );
