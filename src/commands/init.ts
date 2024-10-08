@@ -22,6 +22,7 @@ import {
   isValidNextProject,
 } from "../utils/file";
 import { tempehConfigLive } from "../deps/config";
+import { Await } from "effect/MergeDecision";
 
 class TSConfgNotFoundError extends Error {
   _tag = "TSConfgNotFoundError";
@@ -93,10 +94,15 @@ const initCmd = Command.prompt("init", initCmdPrompts, (prompts) => {
 
       return config;
     }),
+    // check if we need to add any dependencies - zod/tempeh
     Effect.andThen(checkDependencies),
+    // create tempeh.json file
     Effect.andThen(createTempehConfig),
+    // create route.config.ts/js file
     Effect.andThen(createRouteConfig),
+    // add routes to the app directory
     Effect.andThen(addRoutes),
+    // providing services
     Effect.provide(tempehConfigLive),
     Effect.provide(NodeFileSystem.layer),
     Effect.provide(Path.layer),
