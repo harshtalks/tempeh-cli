@@ -9,7 +9,7 @@
 */
 
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
-import initCmd, { checkNextJsProject } from "./src/commands/init";
+import initCmd from "./src/commands/init";
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
 

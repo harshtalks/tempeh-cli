@@ -17,3 +17,15 @@ export class ProjectAlreadyInitialized extends Error {
 export class FormattingError extends Error {
   readonly _tag = "FormattingError";
 }
+
+export class UnInitializedProject extends Error {
+  readonly _tag = "UnInitializedProject";
+}
+
+export class InvalidTempehConfig extends Error {
+  readonly _tag = "InvalidTempehConfig";
+}
+
+export class InvalidRoutesDir extends Error {
+  readonly _tag = "InvalidRoutesDir";
+}

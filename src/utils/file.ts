@@ -1,7 +1,7 @@
-import { Console, Effect, Either } from "effect";
+import { Console, Effect, Either, Ref } from "effect";
 import injectDependencies from "../deps";
 import {
-  MissingDependencies,
+  InvalidRoutesDir,
   NextError,
   ProjectAlreadyInitialized,
 } from "./errors";
@@ -11,7 +11,6 @@ import {
   ROUTE_INFO,
   ROUTE_INFO_JS,
   TEMPEH_CONFIG,
-  TS_CONFIG,
 } from "./constants";
 import {
   routeConfigContent,
@@ -20,7 +19,7 @@ import {
   routeInfoContentBase,
 } from "./content";
 import { FileSystem, Path } from "@effect/platform";
-import { TempehConfig } from "../deps/config";
+import TempehConfig from "../deps/config";
 import { PackageJson } from "type-fest";
 import ora from "ora";
 import { installMissingDependency } from "./packages";
@@ -138,41 +137,22 @@ export const createRouteConfig = injectDependencies.pipe(
 
 // add the routes in the ROUTE_INFO file
 export const addRoutes = injectDependencies.pipe(
-  Effect.andThen(({ fs, path, config }) => {
-    // we are in the routes dir
-    const workingDirectory = path.join(process.cwd(), config.routesDir);
-    // route config
-    const routeConfig = path.join(
-      process.cwd(),
-      config.routeConfigFileLocation,
-    );
-    // relative import location
-    const relativeImportLocation = path.relative(workingDirectory, routeConfig);
-
-    const importLocation = path.join(relativeImportLocation, "route.config");
-    const importLocationValid = importLocation.startsWith(".")
-      ? importLocation
-      : `./${importLocation}`;
-
-    // add the route info
-    return createRouteFile({
-      base: { isBase: true },
-      workingDirectory,
-    }).pipe(
-      Effect.andThen(() => {
-        const dirs = fs.readDirectory(workingDirectory);
-        return dirs.pipe(
-          Effect.andThen((dirs) => {
-            return Effect.forEach(dirs, (d) =>
-              readDirectoryAndAddRoutes(workingDirectory, d),
-            );
-          }),
-        );
-      }),
-    );
+  Effect.andThen(({ fs, config, path }) => {
+    return fs
+      .exists(path.join(process.cwd(), config.routesDir))
+      .pipe(
+        Effect.andThen((bool) =>
+          bool
+            ? readDirectoryAndAddRoutes(process.cwd(), config.routesDir)
+            : Effect.fail(
+                new InvalidRoutesDir("Routes directory does not exist"),
+              ),
+        ),
+      );
   }),
 );
 
+// Decide which type of route needs to be added. base route is different in the sense how it is created.
 const createRouteFile = ({
   base,
   workingDirectory,
@@ -226,6 +206,7 @@ const createRouteFile = ({
   );
 };
 
+// simpler route - no params
 const CreateSimpleRoute = (RouteName: string, RoutePath: string) =>
   Effect.succeed({
     isBase: false,
@@ -234,6 +215,7 @@ const CreateSimpleRoute = (RouteName: string, RoutePath: string) =>
     routeFnResult: `/${RoutePath}`,
   } as Omit<RouteInfoContentArgs, "path"> & { isBase: false });
 
+// routes with parameters
 const CreateParamRoute = (routeName: string, routePath: string) =>
   Effect.all([
     replaceRouteParamsWithParams(routePath),
@@ -253,6 +235,7 @@ const CreateParamRoute = (routeName: string, routePath: string) =>
     ),
   );
 
+// get the path with parameters
 const createParameterizedRoutePath = (RoutePath: string) =>
   Effect.gen(function* () {
     const InterpolatedPath = yield* replaceRouteParamsWithParams(RoutePath);
@@ -260,11 +243,13 @@ const createParameterizedRoutePath = (RoutePath: string) =>
     return `(${`{${ExtractedParams.join(", ")}}`}) => ${"`" + `/${InterpolatedPath}` + "`"}`;
   });
 
+// finally add the route to the route.config file
 const readDirectoryAndAddRoutes = (initialPrefix: string, initialDir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const config = yield* TempehConfig;
+    const tempehConfig = yield* TempehConfig;
+    const config = yield* Ref.get(tempehConfig);
 
     // Stack to keep track of directories to process
     const dirStack: Array<[string, string]> = [[initialPrefix, initialDir]];

@@ -12,7 +12,7 @@
 import { Command, Prompt } from "@effect/cli";
 import { Path, FileSystem } from "@effect/platform";
 import { NodeFileSystem } from "@effect/platform-node";
-import { Console, Effect } from "effect";
+import { Effect, Ref } from "effect";
 import { TS_CONFIG } from "../utils/constants";
 import {
   addRoutes,
@@ -21,26 +21,16 @@ import {
   createTempehConfig,
   isValidNextProject,
 } from "../utils/file";
-import { tempehConfigLive } from "../deps/config";
-import { Await } from "effect/MergeDecision";
 import { prettierLive } from "../deps/prettier";
+import TempehConfig, {
+  initialState,
+  setConfig,
+  TempehSchema,
+} from "../deps/config";
 
 class TSConfgNotFoundError extends Error {
   _tag = "TSConfgNotFoundError";
 }
-
-export const checkNextJsProject = Effect.all([FileSystem.FileSystem, Path.Path])
-  .pipe(
-    Effect.andThen(([fs, path]) => {
-      const isTsProject = fs.exists(path.join(process.cwd(), TS_CONFIG));
-      return isTsProject
-        ? Effect.succeed(true)
-        : Effect.fail(new TSConfgNotFoundError("Not a Next.js project"));
-    }),
-  )
-  .pipe(Effect.provide(Path.layer), Effect.provide(NodeFileSystem.layer));
-
-// prompt for the location of the route.config.ts file
 
 /*
  route config by default will be in the root of the project.
@@ -88,12 +78,12 @@ const initCmdPrompts = Prompt.all({
 
 const initCmd = Command.prompt("init", initCmdPrompts, (prompts) => {
   return isValidNextProject.pipe(
-    Effect.andThen((config) => {
-      config.isTs = prompts.hasTypescript;
-      config.routeConfigFileLocation = prompts.routeConfigFileLocation;
-      config.routesDir = prompts.routesLocatioon as "./app" | "./src/app";
-
-      return config;
+    Effect.andThen(() => {
+      return setConfig({
+        isTs: prompts.hasTypescript,
+        routeConfigFileLocation: prompts.routeConfigFileLocation,
+        routesDir: prompts.routesLocatioon,
+      } as TempehSchema);
     }),
     // check if we need to add any dependencies - zod/tempeh
     Effect.andThen(checkDependencies),
@@ -104,7 +94,7 @@ const initCmd = Command.prompt("init", initCmdPrompts, (prompts) => {
     // add routes to the app directory
     Effect.andThen(addRoutes),
     // providing services
-    Effect.provide(tempehConfigLive),
+    Effect.provideServiceEffect(TempehConfig, initialState),
     Effect.provide(prettierLive),
     Effect.provide(NodeFileSystem.layer),
     Effect.provide(Path.layer),
