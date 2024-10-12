@@ -12,7 +12,7 @@
 import { Command, Prompt } from "@effect/cli";
 import { Path } from "@effect/platform";
 import { NodeFileSystem } from "@effect/platform-node";
-import { Effect, Ref } from "effect";
+import { Effect } from "effect";
 import {
   addRoutes,
   checkDependencies,
@@ -26,10 +26,6 @@ import TempehConfig, {
   setConfig,
   TempehSchema,
 } from "../deps/config";
-
-class TSConfgNotFoundError extends Error {
-  _tag = "TSConfgNotFoundError";
-}
 
 /*
  route config by default will be in the root of the project.

@@ -8,7 +8,7 @@ import { TEMPEH_CONFIG } from "../utils/constants";
 import { UnInitializedProject } from "../utils/errors";
 import TempehConfig, { initialState, setConfig } from "../deps/config";
 import { Command } from "@effect/cli";
-import { NodeFileSystem, NodePath } from "@effect/platform-node";
+import { NodeFileSystem } from "@effect/platform-node";
 import { prettierLive } from "../deps/prettier";
 import { Path } from "@effect/platform";
 import { addRoutes } from "../utils/file";
