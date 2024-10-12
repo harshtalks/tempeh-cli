@@ -46,7 +46,7 @@ export const routeInfoContent = ({
   paramsSchema,
   routeFnResult,
 }: RouteInfoContentArgs) => {
-  const routeName = name[0].toUpperCase() + name.slice(1);
+  const routeName = name.length ? name[0]?.toUpperCase() + name.slice(1) : "";
   return `
 import createRoute${paramsSchema ? "" : ", { EmptyRouteParams }"} from "${path}";
 ${paramsSchema ? `import * as z from "zod";` : ""}

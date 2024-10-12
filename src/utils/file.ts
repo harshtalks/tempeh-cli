@@ -26,9 +26,12 @@ import { PackageJson } from "type-fest";
 import ora from "ora";
 import { installMissingDependency } from "./packages";
 import {
+  addStartingSlash,
   extractRouteParams,
   hasRouteParams,
   mapRouteParamsToZodSchema,
+  removeRouteCaptureGroups,
+  removeTrailingSlashes,
   replaceRouteParamsWithParams,
 } from "./helper";
 import { Prettier } from "../deps/prettier";
@@ -209,18 +212,32 @@ const createRouteFile = ({
 };
 
 // simpler route - no params
-const CreateSimpleRoute = (RouteName: string, RoutePath: string) =>
-  Effect.succeed({
-    isBase: false,
-    name: RouteName,
-    routeFn: `() => "/${RoutePath}"`,
-    routeFnResult: `/${RoutePath}`,
-  } as Omit<RouteInfoContentArgs, "path"> & { isBase: false });
+const CreateSimpleRoute = (routeName: string, routePath: string) =>
+  Effect.all([
+    removeRouteCaptureGroups(routeName, false),
+    removeRouteCaptureGroups(routePath, true).pipe(
+      Effect.andThen((route) => removeRouteCaptureGroups(route, false)),
+      Effect.andThen(addStartingSlash),
+      Effect.andThen(removeTrailingSlashes),
+    ),
+  ]).pipe(
+    Effect.andThen(([routeName, routePath]) =>
+      Effect.succeed({
+        isBase: false,
+        name: routeName,
+        routeFn: `() => "/${routePath}"`,
+        routeFnResult: `/${routePath}`,
+      } as Omit<RouteInfoContentArgs, "path"> & { isBase: false }),
+    ),
+  );
 
 // routes with parameters
 const CreateParamRoute = (routeName: string, routePath: string) =>
   Effect.all([
-    replaceRouteParamsWithParams(routePath),
+    replaceRouteParamsWithParams(routePath).pipe(
+      Effect.andThen(addStartingSlash),
+      Effect.andThen(removeTrailingSlashes),
+    ),
     createParameterizedRoutePath(routePath),
     mapRouteParamsToZodSchema(routePath),
     replaceRouteParamsWithParams(routeName, true),
@@ -240,7 +257,12 @@ const CreateParamRoute = (routeName: string, routePath: string) =>
 // get the path with parameters
 const createParameterizedRoutePath = (RoutePath: string) =>
   Effect.gen(function* () {
-    const InterpolatedPath = yield* replaceRouteParamsWithParams(RoutePath);
+    const InterpolatedPath = yield* replaceRouteParamsWithParams(
+      RoutePath,
+    ).pipe(
+      Effect.andThen(addStartingSlash),
+      Effect.andThen(removeTrailingSlashes),
+    );
     const ExtractedParams = yield* extractRouteParams(RoutePath);
     return `(${`{${ExtractedParams.join(", ")}}`}) => ${"`" + `/${InterpolatedPath}` + "`"}`;
   });
