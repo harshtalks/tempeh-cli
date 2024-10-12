@@ -12,6 +12,7 @@ import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import initCmd from "./src/commands/init";
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
+import updateCmd from "./src/commands/update";
 
 // we need three subcommands
 // - init
@@ -20,7 +21,9 @@ import { Effect } from "effect";
 
 // it is a very basic CLI, good learning for me.
 
-const command = Command.make("tempeh").pipe(Command.withSubcommands([initCmd]));
+const command = Command.make("tempeh").pipe(
+  Command.withSubcommands([updateCmd, initCmd]),
+);
 
 const cli = Command.run(command, {
   name: "tempeh",

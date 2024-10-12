@@ -2,15 +2,20 @@
 // This is a command that will be used afterwards to add new routes to the project.
 // In this state, we already have established the project structure and the route.config.ts file.
 
-import { Effect } from "effect";
+import { Console, Effect } from "effect";
 import injectDependencies from "../deps";
 import { TEMPEH_CONFIG } from "../utils/constants";
-import { InvalidTempehConfig, UnInitializedProject } from "../utils/errors";
-import { TempehSchema } from "../deps/config";
-import { Schema } from "@effect/schema";
+import { UnInitializedProject } from "../utils/errors";
+import TempehConfig, { initialState, setConfig } from "../deps/config";
+import { Command } from "@effect/cli";
+import { NodeFileSystem, NodePath } from "@effect/platform-node";
+import { prettierLive } from "../deps/prettier";
+import { Path } from "@effect/platform";
+import { addRoutes } from "../utils/file";
 
+// Readng and setting up the tempeh config.
 const readTempehConfig = injectDependencies.pipe(
-  Effect.andThen(({ config, fs, path }) => {
+  Effect.andThen(({ fs, path, config }) => {
     const filePath = path.join(process.cwd(), TEMPEH_CONFIG);
     return fs.readFileString(filePath).pipe(
       Effect.catchTag("SystemError", () => {
@@ -20,24 +25,28 @@ const readTempehConfig = injectDependencies.pipe(
           ),
         );
       }),
-      Effect.andThen((file) => {
-        return Schema.decodeUnknown(TempehSchema)(file);
-      }),
-      Effect.catchTag("ParseError", () => {
-        return Effect.fail(
-          new InvalidTempehConfig(
-            "😭 Tempeh config file is not valid. Please revert the changes if you have made any.",
-          ),
-        );
-      }),
-      Effect.andThen((decoded) => {
-        config.isTs = decoded.isTs;
-        config.routeConfigFileLocation = decoded.routeConfigFileLocation;
-      }),
+      Effect.andThen((file) => JSON.parse(file) as unknown),
+      Effect.andThen(setConfig),
+      Effect.andThen(() =>
+        Console.log("🧀 Routes found in " + config.routesDir + " directory."),
+      ),
     );
   }),
 );
 
-const hasInitRun = injectDependencies.pipe(
-  Effect.andThen(({ config, fs, path }) => {}),
-);
+const updateCmd = Command.make("update", {}, () => {
+  return readTempehConfig.pipe(
+    // add routes to the routes directory
+    Effect.andThen(addRoutes),
+    // providing services
+    Effect.provideServiceEffect(TempehConfig, initialState),
+    // file system
+    Effect.provide(NodeFileSystem.layer),
+    // prettier formatting
+    Effect.provide(prettierLive),
+    // path config
+    Effect.provide(Path.layer),
+  );
+});
+
+export default updateCmd;

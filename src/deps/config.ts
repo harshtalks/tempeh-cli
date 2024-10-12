@@ -26,7 +26,6 @@ export const setConfig = (config: unknown) =>
   Effect.gen(function* () {
     const ref = yield* TempehConfig;
     const decoded = yield* Schema.decodeUnknown(TempehSchema)(config);
-    console.log(config);
     yield* Ref.update(ref, () => ({
       isTs: decoded.isTs,
       routeConfigFileLocation: decoded.routeConfigFileLocation,

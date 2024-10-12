@@ -10,10 +10,9 @@
 // 2. We need to make sure we are in a Next.js project. do this with next.config.js/next.config.ts file
 
 import { Command, Prompt } from "@effect/cli";
-import { Path, FileSystem } from "@effect/platform";
+import { Path } from "@effect/platform";
 import { NodeFileSystem } from "@effect/platform-node";
 import { Effect, Ref } from "effect";
-import { TS_CONFIG } from "../utils/constants";
 import {
   addRoutes,
   checkDependencies,

@@ -6,6 +6,8 @@ import {
   ProjectAlreadyInitialized,
 } from "./errors";
 import {
+  hasPageInRoute,
+  hasRouteInfoInRoute,
   NEXT_CONFIG_FILES,
   ROUTE_CONFIG,
   ROUTE_INFO,
@@ -253,6 +255,7 @@ const readDirectoryAndAddRoutes = (initialPrefix: string, initialDir: string) =>
 
     // Stack to keep track of directories to process
     const dirStack: Array<[string, string]> = [[initialPrefix, initialDir]];
+    let newRoutesInfoAdded = false;
 
     while (dirStack.length > 0) {
       const [prefix, dir] = dirStack.pop()!;
@@ -262,12 +265,16 @@ const readDirectoryAndAddRoutes = (initialPrefix: string, initialDir: string) =>
       if (Either.isRight(dirsResult)) {
         const entries = dirsResult.right;
 
-        // check if the directory has a page.tsx file
-        const hasPage = entries.includes("page.tsx");
+        // check if the directory has a page.tsx file. also check if the route is already there
+        // We dont want to add the same route again
+        const hasPage = yield* hasPageInRoute(entries);
+        const routeAlreadyThere = yield* hasRouteInfoInRoute(entries);
 
-        if (hasPage) {
+        if (hasPage && !routeAlreadyThere) {
           // add the route to the route.config file
+
           const routeName = directory.split("/").pop();
+
           const routePath = path.relative(
             path.join(process.cwd(), config.routesDir),
             directory,
@@ -284,6 +291,8 @@ const readDirectoryAndAddRoutes = (initialPrefix: string, initialDir: string) =>
               base: baseRoute,
               workingDirectory: directory,
             });
+
+            newRoutesInfoAdded = true;
           }
         }
 
@@ -299,5 +308,11 @@ const readDirectoryAndAddRoutes = (initialPrefix: string, initialDir: string) =>
           }
         }
       }
+    }
+
+    if (!newRoutesInfoAdded) {
+      yield* Console.log(
+        "🧀 No new routes added. Every page already has a route info set up.",
+      );
     }
   });
