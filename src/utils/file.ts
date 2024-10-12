@@ -16,6 +16,7 @@ import {
 import {
   routeConfigContent,
   routeInfoContent,
+  RouteInfoContentArgs,
   routeInfoContentBase,
 } from "./content";
 import { FileSystem, Path } from "@effect/platform";
@@ -29,6 +30,7 @@ import {
   mapRouteParamsToZodSchema,
   replaceRouteParamsWithParams,
 } from "./helper";
+import { Prettier } from "../deps/prettier";
 
 // check if the tempeh and zod is installed
 export const checkDependencies = injectDependencies.pipe(
@@ -78,13 +80,13 @@ export const createTempehConfig = injectDependencies.pipe(
   Effect.andThen(({ fs, path, config }) => {
     const filePath = path.join(process.cwd(), TEMPEH_CONFIG);
     return fs.readFileString(filePath).pipe(
-      Effect.catchTag("SystemError", () => {
-        return fs.writeFileString(filePath, JSON.stringify(config, null, 2));
-      }),
       Effect.andThen((file) => {
         return Effect.fail(
           new ProjectAlreadyInitialized("😭 Tempeh config file already exists"),
         );
+      }),
+      Effect.catchTag("SystemError", () => {
+        return fs.writeFileString(filePath, JSON.stringify(config, null, 2));
       }),
     );
   }),
@@ -110,7 +112,22 @@ export const createRouteConfig = injectDependencies.pipe(
                 givenPath,
                 config.isTs ? ROUTE_CONFIG : ROUTE_INFO_JS,
               );
-              return fs.writeFileString(routeConfigFile, routeConfigContent);
+              return Prettier.pipe(
+                Effect.andThen((format) =>
+                  format(routeConfigContent, {
+                    parser: config.isTs ? "typescript" : "babel",
+                  }),
+                ),
+              ).pipe(
+                Effect.andThen((content) =>
+                  fs.writeFileString(routeConfigFile, content),
+                ),
+                Effect.andThen(() =>
+                  Console.log(
+                    `🧀 Route.config file is created at the ${routeConfigFile}`,
+                  ),
+                ),
+              );
             }),
           );
         }
@@ -163,13 +180,7 @@ const createRouteFile = ({
   workingDirectory: string;
   base:
     | { isBase: true }
-    | {
-        isBase: false;
-        routeName: string;
-        routePath: string;
-        routePathWithoutString: string;
-        paramsSchema?: string;
-      };
+    | (Omit<RouteInfoContentArgs, "path"> & { isBase: false });
 }) => {
   return injectDependencies.pipe(
     Effect.andThen(({ fs, path, config }) => {
@@ -183,24 +194,34 @@ const createRouteFile = ({
         ? importLocation
         : `./${importLocation}`;
 
-      return fs
-        .writeFileString(
-          path.join(workingDirectory, config.isTs ? ROUTE_INFO : ROUTE_INFO_JS),
-          base.isBase
-            ? routeInfoContentBase(importLocationValid)
-            : routeInfoContent(
-                importLocationValid,
-                base.routeName,
-                base.routePath,
-                base.routePathWithoutString,
-                base.paramsSchema,
-              ),
-        )
-        .pipe(
-          Effect.andThen(() =>
-            Console.log(`🧀 New route created at ${workingDirectory}`),
+      return Prettier.pipe(
+        Effect.andThen((format) => {
+          return format(
+            base.isBase
+              ? routeInfoContentBase(importLocationValid)
+              : routeInfoContent({
+                  ...base,
+                  path: importLocationValid,
+                }),
+            {
+              parser: config.isTs ? "typescript" : "babel",
+            },
+          );
+        }),
+      ).pipe(
+        Effect.andThen((content) =>
+          fs.writeFileString(
+            path.join(
+              workingDirectory,
+              config.isTs ? ROUTE_INFO : ROUTE_INFO_JS,
+            ),
+            content,
           ),
-        );
+        ),
+        Effect.andThen(() =>
+          Console.log(`🧀 New route created at ${workingDirectory}`),
+        ),
+      );
     }),
   );
 };
@@ -208,25 +229,36 @@ const createRouteFile = ({
 const CreateSimpleRoute = (RouteName: string, RoutePath: string) =>
   Effect.succeed({
     isBase: false,
-    routeName: RouteName,
-    routePath: `() => "/${RoutePath}"`,
-    routePathWithoutString: `/${RoutePath}`,
-  });
+    name: RouteName,
+    routeFn: `() => "/${RoutePath}"`,
+    routeFnResult: `/${RoutePath}`,
+  } as Omit<RouteInfoContentArgs, "path"> & { isBase: false });
 
-const CreateParamRoute = (RouteName: string, RoutePath: string) =>
-  Effect.succeed({
-    isBase: false,
-    routeName: replaceRouteParamsWithParams(RouteName, true),
-    routePath: CreateParameterizedRoutePath(RoutePath),
-    routePathWithoutString: `/${replaceRouteParamsWithParams(RoutePath)}`,
-    paramsSchema: mapRouteParamsToZodSchema(RoutePath),
-  });
+const CreateParamRoute = (routeName: string, routePath: string) =>
+  Effect.all([
+    replaceRouteParamsWithParams(routePath),
+    createParameterizedRoutePath(routePath),
+    mapRouteParamsToZodSchema(routePath),
+    replaceRouteParamsWithParams(routeName, true),
+  ]).pipe(
+    Effect.andThen(
+      ([routeFnResult, routeFn, paramsSchema, routeName]) =>
+        ({
+          name: routeName,
+          isBase: false,
+          routeFn: routeFn,
+          routeFnResult: routeFnResult,
+          paramsSchema: paramsSchema,
+        }) as Omit<RouteInfoContentArgs, "path"> & { isBase: false },
+    ),
+  );
 
-const CreateParameterizedRoutePath = (RoutePath: string): string => {
-  const InterpolatedPath = replaceRouteParamsWithParams(RoutePath);
-  const ExtractedParams = extractRouteParams(RoutePath);
-  return `(${`{${ExtractedParams.join(", ")}}`}) => ${"`" + `/${InterpolatedPath}` + "`"}`;
-};
+const createParameterizedRoutePath = (RoutePath: string) =>
+  Effect.gen(function* () {
+    const InterpolatedPath = yield* replaceRouteParamsWithParams(RoutePath);
+    const ExtractedParams = yield* extractRouteParams(RoutePath);
+    return `(${`{${ExtractedParams.join(", ")}}`}) => ${"`" + `/${InterpolatedPath}` + "`"}`;
+  });
 
 const readDirectoryAndAddRoutes = (initialPrefix: string, initialDir: string) =>
   Effect.gen(function* () {
@@ -257,7 +289,8 @@ const readDirectoryAndAddRoutes = (initialPrefix: string, initialDir: string) =>
           );
 
           if (routeName) {
-            const hasParams = hasRouteParams(routePath);
+            const hasParams = yield* hasRouteParams(routePath);
+
             const baseRoute = hasParams
               ? yield* CreateParamRoute(routeName, routePath)
               : yield* CreateSimpleRoute(routeName, routePath);

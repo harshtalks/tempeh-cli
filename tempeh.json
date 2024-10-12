@@ -1,5 +1,5 @@
 {
   "isTs": true,
-  "routeConfigFileLocation": ".",
+  "routeConfigFileLocation": "confug",
   "routesDir": "./app"
 }

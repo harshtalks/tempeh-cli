@@ -31,22 +31,30 @@ const HomePageRoute = createRoute({
 export default HomePageRoute
 `;
 
-export const routeInfoContent = (
-  path: string,
-  name: string,
-  routePath: string,
-  routePathWithoutFn: string,
-  paramsSchema?: string,
-) => {
+export type RouteInfoContentArgs = {
+  path: string;
+  name: string;
+  routeFn: string;
+  routeFnResult: string;
+  paramsSchema?: string;
+};
+
+export const routeInfoContent = ({
+  name,
+  path,
+  routeFn,
+  paramsSchema,
+  routeFnResult,
+}: RouteInfoContentArgs) => {
   const routeName = name[0].toUpperCase() + name.slice(1);
   return `
 import createRoute${paramsSchema ? "" : ", { EmptyRouteParams }"} from "${path}";
 ${paramsSchema ? `import * as z from "zod";` : ""}
 
 const ${routeName}PageRoute = createRoute({
-  name: "${routePathWithoutFn}",
+  name: "${routeFnResult}",
   paramsSchema: ${paramsSchema ? paramsSchema : "EmptyRouteParams"},
-  fn: ${routePath},
+  fn: ${routeFn},
 })
 
 export default ${routeName}PageRoute

@@ -13,3 +13,7 @@ export class MissingDependencies extends Error {
 export class ProjectAlreadyInitialized extends Error {
   readonly _tag = "ProjectAlreadyInitialized";
 }
+
+export class FormattingError extends Error {
+  readonly _tag = "FormattingError";
+}

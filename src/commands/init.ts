@@ -23,6 +23,7 @@ import {
 } from "../utils/file";
 import { tempehConfigLive } from "../deps/config";
 import { Await } from "effect/MergeDecision";
+import { prettierLive } from "../deps/prettier";
 
 class TSConfgNotFoundError extends Error {
   _tag = "TSConfgNotFoundError";
@@ -104,6 +105,7 @@ const initCmd = Command.prompt("init", initCmdPrompts, (prompts) => {
     Effect.andThen(addRoutes),
     // providing services
     Effect.provide(tempehConfigLive),
+    Effect.provide(prettierLive),
     Effect.provide(NodeFileSystem.layer),
     Effect.provide(Path.layer),
   );
