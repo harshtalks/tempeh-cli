@@ -4,7 +4,6 @@
   "description": "Generate tempeh declarative routes just from a single command.",
   "main": "index.js",
   "scripts": {
-    "check-exports": "attw --pack . --ignore-rules=cjs-resolves-to-esm",
     "build": "tsup"
   },
   "keywords": [
@@ -29,7 +28,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.16.4",
     "@types/node": "^22.7.4",
     "tsup": "^8.3.0",
     "tsx": "^4.19.1"

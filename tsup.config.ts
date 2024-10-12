@@ -2,8 +2,7 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   entryPoints: ["src/index.ts"],
-  dts: true,
-  outDir: "dist",
   clean: true,
+  publicDir: true,
   treeshake: "smallest",
 });
