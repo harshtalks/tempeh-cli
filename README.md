@@ -8,7 +8,7 @@ Command Line Interface for tempeh, declarative routing package for Next.js >= 13
 
 ## About the project
 
-This project was started to learn the effect ecosystem. With the help of effect libraries this project aims to provide support to generate routes thru the CLI. which is a very redundant work if most of your routes are not having any parameters or search parameters schema.
+This project was initiated as an exploration of the effect ecosystem. Leveraging effect libraries, it aims to streamline the process of generating routes through a Command Line Interface (CLI). This automation significantly reduces redundancy, especially for projects where most routes lack complex parameters or search parameter schemas.
 
 Libraries used -
 - effect
