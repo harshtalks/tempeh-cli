@@ -1,3 +1,5 @@
+import * as changeCase from "change-case";
+
 export const routeConfigContent = `
 import { routeBuilder } from "tempeh";
 import { void as _void } from "zod";
@@ -46,7 +48,10 @@ export const routeInfoContent = ({
   paramsSchema,
   routeFnResult,
 }: RouteInfoContentArgs) => {
-  const routeName = name.length ? name[0]?.toUpperCase() + name.slice(1) : "";
+  const routeNamePascal = changeCase.pascalCase(name);
+  const routeName = routeNamePascal.length
+    ? routeNamePascal[0]?.toUpperCase() + routeNamePascal.slice(1)
+    : "";
   return `
 import createRoute${paramsSchema ? "" : ", { EmptyRouteParams }"} from "${path}";
 ${paramsSchema ? `import * as z from "zod";` : ""}
