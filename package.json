@@ -1,10 +1,11 @@
 {
   "name": "tempeh-cli",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "Generate tempeh declarative routes just from a single command.",
   "main": "index.js",
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "local-release": "changeset version && changeset publish"
   },
   "keywords": [
     "declarative routing",
@@ -28,6 +29,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.27.9",
     "@types/node": "^22.7.4",
     "tsup": "^8.3.0",
     "tsx": "^4.19.1"
