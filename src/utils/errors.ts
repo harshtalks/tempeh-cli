@@ -9,3 +9,7 @@ export class NextError extends Error {
 export class MissingDependencies extends Error {
   readonly _tag = "MissingDependencies";
 }
+
+export class ProjectAlreadyInitialized extends Error {
+  readonly _tag = "ProjectAlreadyInitialized";
+}

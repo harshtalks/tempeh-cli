@@ -1,6 +1,10 @@
 import { Console, Effect, Either } from "effect";
 import injectDependencies from "../deps";
-import { MissingDependencies, NextError } from "./errors";
+import {
+  MissingDependencies,
+  NextError,
+  ProjectAlreadyInitialized,
+} from "./errors";
 import {
   NEXT_CONFIG_FILES,
   ROUTE_CONFIG,
@@ -78,7 +82,9 @@ export const createTempehConfig = injectDependencies.pipe(
         return fs.writeFileString(filePath, JSON.stringify(config, null, 2));
       }),
       Effect.andThen((file) => {
-        return Effect.fail(new Error("😭 Tempeh config file already exists"));
+        return Effect.fail(
+          new ProjectAlreadyInitialized("😭 Tempeh config file already exists"),
+        );
       }),
     );
   }),
