@@ -19,6 +19,12 @@ import { TempehConfig } from "../deps/config";
 import { PackageJson } from "type-fest";
 import ora from "ora";
 import { installMissingDependency } from "./packages";
+import {
+  extractRouteParams,
+  hasRouteParams,
+  mapRouteParamsToZodSchema,
+  replaceRouteParamsWithParams,
+} from "./helper";
 
 // check if the tempeh and zod is installed
 export const checkDependencies = injectDependencies.pipe(
@@ -67,7 +73,14 @@ export const isValidNextProject = injectDependencies.pipe(
 export const createTempehConfig = injectDependencies.pipe(
   Effect.andThen(({ fs, path, config }) => {
     const filePath = path.join(process.cwd(), TEMPEH_CONFIG);
-    return fs.writeFileString(filePath, JSON.stringify(config, null, 2));
+    return fs.readFileString(filePath).pipe(
+      Effect.catchTag("SystemError", () => {
+        return fs.writeFileString(filePath, JSON.stringify(config, null, 2));
+      }),
+      Effect.andThen((file) => {
+        return Effect.fail(new Error("😭 Tempeh config file already exists"));
+      }),
+    );
   }),
 );
 
@@ -134,8 +147,6 @@ export const addRoutes = injectDependencies.pipe(
         );
       }),
     );
-
-    // now we will have to read all the directories in the working directory
   }),
 );
 
@@ -144,7 +155,15 @@ const createRouteFile = ({
   workingDirectory,
 }: {
   workingDirectory: string;
-  base: { isBase: true } | { isBase: false; routeName: string };
+  base:
+    | { isBase: true }
+    | {
+        isBase: false;
+        routeName: string;
+        routePath: string;
+        routePathWithoutString: string;
+        paramsSchema?: string;
+      };
 }) => {
   return injectDependencies.pipe(
     Effect.andThen(({ fs, path, config }) => {
@@ -158,17 +177,50 @@ const createRouteFile = ({
         ? importLocation
         : `./${importLocation}`;
 
-      return fs.writeFileString(
-        path.join(workingDirectory, config.isTs ? ROUTE_INFO : ROUTE_INFO_JS),
-        base.isBase
-          ? routeInfoContentBase(importLocationValid)
-          : routeInfoContent(importLocationValid, base.routeName),
-      );
+      return fs
+        .writeFileString(
+          path.join(workingDirectory, config.isTs ? ROUTE_INFO : ROUTE_INFO_JS),
+          base.isBase
+            ? routeInfoContentBase(importLocationValid)
+            : routeInfoContent(
+                importLocationValid,
+                base.routeName,
+                base.routePath,
+                base.routePathWithoutString,
+                base.paramsSchema,
+              ),
+        )
+        .pipe(
+          Effect.andThen(() =>
+            Console.log(`🧀 New route created at ${workingDirectory}`),
+          ),
+        );
     }),
   );
 };
 
-// recursive sum
+const CreateSimpleRoute = (RouteName: string, RoutePath: string) =>
+  Effect.succeed({
+    isBase: false,
+    routeName: RouteName,
+    routePath: `() => "/${RoutePath}"`,
+    routePathWithoutString: `/${RoutePath}`,
+  });
+
+const CreateParamRoute = (RouteName: string, RoutePath: string) =>
+  Effect.succeed({
+    isBase: false,
+    routeName: replaceRouteParamsWithParams(RouteName, true),
+    routePath: CreateParameterizedRoutePath(RoutePath),
+    routePathWithoutString: `/${replaceRouteParamsWithParams(RoutePath)}`,
+    paramsSchema: mapRouteParamsToZodSchema(RoutePath),
+  });
+
+const CreateParameterizedRoutePath = (RoutePath: string): string => {
+  const InterpolatedPath = replaceRouteParamsWithParams(RoutePath);
+  const ExtractedParams = extractRouteParams(RoutePath);
+  return `(${`{${ExtractedParams.join(", ")}}`}) => ${"`" + `/${InterpolatedPath}` + "`"}`;
+};
 
 const readDirectoryAndAddRoutes = (initialPrefix: string, initialDir: string) =>
   Effect.gen(function* () {
@@ -189,14 +241,23 @@ const readDirectoryAndAddRoutes = (initialPrefix: string, initialDir: string) =>
 
         // check if the directory has a page.tsx file
         const hasPage = entries.includes("page.tsx");
+
         if (hasPage) {
           // add the route to the route.config file
           const routeName = directory.split("/").pop();
-          const routePath = directory;
+          const routePath = path.relative(
+            path.join(process.cwd(), config.routesDir),
+            directory,
+          );
 
           if (routeName) {
+            const hasParams = hasRouteParams(routePath);
+            const baseRoute = hasParams
+              ? yield* CreateParamRoute(routeName, routePath)
+              : yield* CreateSimpleRoute(routeName, routePath);
+
             yield* createRouteFile({
-              base: { isBase: false, routeName },
+              base: baseRoute,
               workingDirectory: directory,
             });
           }

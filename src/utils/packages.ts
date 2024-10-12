@@ -10,7 +10,7 @@ export const installMissingDependency = (...packageNames: string[]) =>
     // start the spinner
     const spinner = yield* Effect.succeed(
       ora(
-        `Installing missing dependency - ${packageNames.join(", ")}...`,
+        `🧀 Installing missing dependency - ${packageNames.join(", ")}...`,
       ).start(),
     );
 
