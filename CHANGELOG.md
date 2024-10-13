@@ -1,5 +1,11 @@
 # tempeh-cli
 
+## 0.1.1
+
+### Patch Changes
+
+- 7ae20ba: this thing runs now
+
 ## 0.1.0
 
 ### Minor Changes
