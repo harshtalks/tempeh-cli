@@ -1,6 +1,6 @@
 {
   "name": "tempeh-cli",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Generate tempeh declarative routes just from a single command.",
   "main": "index.js",
   "scripts": {
