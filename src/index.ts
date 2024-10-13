@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // We are finally introducing the CLI tio make this easier for a lot of yall to initiate tempeh in a project.
 /*
   The CLI will have the following commands:
@@ -28,4 +30,8 @@ const cli = Command.run(command, {
   version: "0.0.1",
 });
 
-cli(process.argv).pipe(Effect.provide(NodeContext.layer), NodeRuntime.runMain);
+cli(process.argv).pipe(
+  Effect.orDie,
+  Effect.provide(NodeContext.layer),
+  NodeRuntime.runMain,
+);
