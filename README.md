@@ -26,24 +26,6 @@ Run **tempeh-cli** with npm
   npx tempeh-cli init
 ```
 
-Run **tempeh-cli** with pnpm
-
-```bash
-  pnpm dlx tempeh-cli init
-```
-
-Run **tempeh-cli** with bun
-
-```bash
-  bunx tempeh-cli init
-```
-
-Run **tempeh-cli** with yarn
-
-```bash
-  yarn dlx tempeh-cli init
-```
-
 
 
 
