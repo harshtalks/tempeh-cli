@@ -47,6 +47,10 @@ const updateCmd = Command.make("update", {}, () => {
     // path config
     Effect.provide(Path.layer),
   );
-});
+}).pipe(
+  Command.withDescription(
+    "add the declarative routing objects in the project for the new routes that are added since you last ran the CLI.",
+  ),
+);
 
 export default updateCmd;

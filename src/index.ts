@@ -21,9 +21,13 @@ import updateCmd from "./commands/update";
 
 // it is a very basic CLI, good learning for me.
 
-const command = Command.make("tempeh").pipe(
-  Command.withSubcommands([updateCmd, initCmd]),
-);
+const command = Command.make("tempeh")
+  .pipe(Command.withSubcommands([updateCmd, initCmd]))
+  .pipe(
+    Command.withDescription(
+      "Tempeh is a CLI tool to help you manage your routes in Next.js with tempeh library and zod.",
+    ),
+  );
 
 const cli = Command.run(command, {
   name: "tempeh",

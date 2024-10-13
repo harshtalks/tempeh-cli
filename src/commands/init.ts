@@ -71,7 +71,7 @@ const initCmdPrompts = Prompt.all({
   routesLocatioon,
 });
 
-const initCmd = Command.prompt("init", initCmdPrompts, (prompts) => {
+const initCmd = Command.prompt("init" as const, initCmdPrompts, (prompts) => {
   return isValidNextProject.pipe(
     Effect.andThen(() => {
       return setConfig({
@@ -94,6 +94,10 @@ const initCmd = Command.prompt("init", initCmdPrompts, (prompts) => {
     Effect.provide(NodeFileSystem.layer),
     Effect.provide(Path.layer),
   );
-});
+}).pipe(
+  Command.withDescription(
+    "initialize the project with the required files and folders, adds declarative routing objects to the project.",
+  ),
+);
 
 export default initCmd;
