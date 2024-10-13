@@ -1,0 +1,5 @@
+---
+"tempeh-cli": minor
+---
+
+executable
